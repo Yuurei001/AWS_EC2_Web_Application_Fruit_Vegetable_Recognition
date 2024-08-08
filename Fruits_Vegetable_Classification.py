@@ -1,10 +1,11 @@
 import streamlit as st
 from PIL import Image
-from keras.preprocessing.image import load_img, img_to_array
 import numpy as np
-from keras.models import load_model
+from tensorflow.keras.models import load_model
+from tensorflow.keras.utils import load_img, img_to_array
 import requests
 from bs4 import BeautifulSoup
+import os
 
 model = load_model('FV.h5')
 labels = {0: 'apple', 1: 'banana', 2: 'beetroot', 3: 'bell pepper', 4: 'cabbage', 5: 'capsicum', 6: 'carrot',
@@ -26,11 +27,15 @@ def fetch_calories(prediction):
         url = 'https://www.google.com/search?&q=calories in ' + prediction
         req = requests.get(url).text
         scrap = BeautifulSoup(req, 'html.parser')
-        calories = scrap.find("div", class_="BNeawe iBp4i AP7Wnd").text
-        return calories
+        calories = scrap.find("div", class_="BNeawe iBp4i AP7Wnd")
+        if calories:
+            return calories.text
+        else:
+            return "N/A"
     except Exception as e:
         st.error("Can't able to fetch the Calories")
         print(e)
+        return "N/A"
 
 
 def processed_img(img_path):
@@ -54,12 +59,15 @@ def run():
     if img_file is not None:
         img = Image.open(img_file).resize((250, 250))
         st.image(img, use_column_width=False)
+
+        # Tạo thư mục 'upload_images' nếu chưa tồn tại
         save_image_path = './upload_images/' + img_file.name
+        os.makedirs(os.path.dirname(save_image_path), exist_ok=True)
+
         with open(save_image_path, "wb") as f:
             f.write(img_file.getbuffer())
 
-        # if st.button("Predict"):
-        if img_file is not None:
+        if st.button("Predict"):
             result = processed_img(save_image_path)
             print(result)
             if result in vegetables:
